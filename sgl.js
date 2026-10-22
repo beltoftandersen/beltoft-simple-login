@@ -94,6 +94,43 @@
     activeButton = event.currentTarget;
   }
 
+  // As wide as its container, within what Google allows (200 to 400 px), so the button lines up
+  // with the form fields around it instead of sitting at Google's narrower default.
+  function buttonWidth(element) {
+    var width = Math.floor(element.getBoundingClientRect().width);
+
+    return width > 0 ? Math.max(200, Math.min(400, width)) : 0;
+  }
+
+  function draw(element) {
+    var width = buttonWidth(element);
+
+    element.dataset.sglWidth = String(width);
+    element.innerHTML = '';
+
+    window.google.accounts.id.renderButton(element, {
+      type: 'standard',
+      width: width || undefined,
+      theme: element.dataset.theme || 'outline',
+      size: element.dataset.size || 'large',
+      text: element.dataset.text || 'continue_with',
+      shape: 'rectangular',
+      locale: window.SGL.locale || ''
+    });
+  }
+
+  // The layout can settle after the first draw (fonts, a checkout step opening, a phone turning):
+  // draw again when the container's width really changed.
+  var resizer = window.ResizeObserver ? new ResizeObserver(function (entries) {
+    entries.forEach(function (entry) {
+      var element = entry.target;
+
+      if (Math.abs(buttonWidth(element) - Number(element.dataset.sglWidth || 0)) > 1) {
+        draw(element);
+      }
+    });
+  }) : null;
+
   function renderButtons() {
     document.querySelectorAll('.sgl-btn:not([data-sgl-rendered])').forEach(function (element) {
       element.dataset.sglRendered = 'true';
@@ -101,14 +138,11 @@
       element.addEventListener('pointerdown', rememberButton, true);
       element.addEventListener('focusin', rememberButton);
 
-      window.google.accounts.id.renderButton(element, {
-        type: 'standard',
-        theme: element.dataset.theme || 'outline',
-        size: element.dataset.size || 'large',
-        text: element.dataset.text || 'continue_with',
-        shape: 'rectangular',
-        locale: window.SGL.locale || ''
-      });
+      draw(element);
+
+      if (resizer) {
+        resizer.observe(element);
+      }
     });
   }
 

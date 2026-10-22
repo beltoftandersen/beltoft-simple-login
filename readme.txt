@@ -4,7 +4,7 @@ Tags: google, login, woocommerce, social login, bricks
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.4
+Stable tag: 1.2.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ Add the exact site origin (scheme and host, no path) to the OAuth client's Autho
 No. Only the roles in the `sgl_allowed_roles` filter (default: customer, subscriber) can.
 
 == Changelog ==
+
+= 1.2.5 =
+* The Google button is as wide as its container (200 to 400 px), so it lines up with the form fields, and is drawn again when the container's width changes.
 
 = 1.2.4 =
 * License header and readme.txt added. An escaping comment added in the Bricks element's builder preview. No
