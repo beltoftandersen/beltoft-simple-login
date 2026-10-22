@@ -108,6 +108,10 @@
     var width = buttonWidth(element);
 
     element.dataset.sglWidth = String(width);
+    // Keep the current height while Google draws the new button, so nothing below it moves.
+    if (element.offsetHeight) {
+      element.style.minHeight = element.offsetHeight + 'px';
+    }
     element.innerHTML = '';
 
     window.google.accounts.id.renderButton(element, {
