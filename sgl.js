@@ -97,7 +97,9 @@
   // As wide as its container, within what Google allows (200 to 400 px), so the button lines up
   // with the form fields around it instead of sitting at Google's narrower default.
   function buttonWidth(element) {
-    var width = Math.floor(element.getBoundingClientRect().width);
+    // The content box: padding and borders are not room for the button.
+    var style = window.getComputedStyle(element);
+    var width = Math.floor(element.clientWidth - parseFloat(style.paddingLeft || 0) - parseFloat(style.paddingRight || 0));
 
     return width > 0 ? Math.max(200, Math.min(400, width)) : 0;
   }
@@ -110,7 +112,7 @@
 
     window.google.accounts.id.renderButton(element, {
       type: 'standard',
-      width: width || undefined,
+      width: width ? String(width) : undefined,
       theme: element.dataset.theme || 'outline',
       size: element.dataset.size || 'large',
       text: element.dataset.text || 'continue_with',
@@ -124,8 +126,22 @@
   var resizer = window.ResizeObserver ? new ResizeObserver(function (entries) {
     entries.forEach(function (entry) {
       var element = entry.target;
+      var width;
 
-      if (Math.abs(buttonWidth(element) - Number(element.dataset.sglWidth || 0)) > 1) {
+      // Replaced by the page (a checkout step re-rendered): stop watching the old node.
+      if (!element.isConnected) {
+        resizer.unobserve(element);
+        return;
+      }
+
+      width = buttonWidth(element);
+
+      // 0 while the old button is cleared out of a shrink-to-fit container: not a real size.
+      if (!width && Number(element.dataset.sglWidth || 0) > 0) {
+        return;
+      }
+
+      if (Math.abs(width - Number(element.dataset.sglWidth || 0)) > 1) {
         draw(element);
       }
     });

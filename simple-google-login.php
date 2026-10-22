@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.2.5
+ * Version: 1.2.6
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.2.5';
+	const VERSION = '1.2.6';
 	const META    = '_sgl_google_sub';
 
 	private static $loaded = false;
@@ -348,6 +348,11 @@ final class Simple_Google_Login {
 
 		if ( apply_filters( 'sgl_reset_password_on_link', true, $user ) ) {
 			wp_set_password( wp_generate_password( 32, true, true ), $user->ID );
+
+			// wp_set_password() leaves existing logins alive: someone who registered this email
+			// first and stayed logged in would keep the account. End every session; the login
+			// that follows sets a fresh cookie.
+			WP_Session_Tokens::get_instance( $user->ID )->destroy_all();
 		}
 
 		return true;
