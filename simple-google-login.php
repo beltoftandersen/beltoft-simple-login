@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.2.7
+ * Version: 1.2.8
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.2.7';
+	const VERSION = '1.2.8';
 	const META    = '_sgl_google_sub';
 
 	private static $loaded = false;
@@ -319,6 +319,48 @@ final class Simple_Google_Login {
 		return $valid ? $claims : false;
 	}
 
+	/**
+	 * Fills the account and WooCommerce billing names (and billing email) from the Google profile,
+	 * only where they are still empty: checkout reads the billing fields, which account creation
+	 * alone leaves blank. A name the customer typed is never overwritten.
+	 *
+	 * @param WP_User              $user   Customer.
+	 * @param array<string, mixed> $claims Verified ID token claims.
+	 */
+	private static function fill_names( $user, $claims ) {
+		if ( ! apply_filters( 'sgl_fill_names', true, $user, $claims ) || ! class_exists( 'WC_Customer' ) ) {
+			return;
+		}
+
+		$first = sanitize_text_field( (string) ( $claims['given_name'] ?? '' ) );
+		$last  = sanitize_text_field( (string) ( $claims['family_name'] ?? '' ) );
+
+		try {
+			$customer = new WC_Customer( $user->ID );
+		} catch ( Exception $e ) {
+			return;
+		}
+
+		// The account's own name (typed by the customer) wins; Google's fills only what is empty.
+		if ( '' === (string) $customer->get_first_name() && '' !== $first ) {
+			$customer->set_first_name( $first );
+		}
+		if ( '' === (string) $customer->get_last_name() && '' !== $last ) {
+			$customer->set_last_name( $last );
+		}
+		if ( '' === (string) $customer->get_billing_first_name() && '' !== (string) $customer->get_first_name() ) {
+			$customer->set_billing_first_name( $customer->get_first_name() );
+		}
+		if ( '' === (string) $customer->get_billing_last_name() && '' !== (string) $customer->get_last_name() ) {
+			$customer->set_billing_last_name( $customer->get_last_name() );
+		}
+		if ( '' === (string) $customer->get_billing_email() ) {
+			$customer->set_billing_email( $user->user_email );
+		}
+
+		$customer->save();
+	}
+
 	private static function role_is_allowed( $user ) {
 		$allowed = (array) apply_filters( 'sgl_allowed_roles', array( 'customer', 'subscriber' ) );
 		$roles   = (array) $user->roles;
@@ -471,6 +513,8 @@ final class Simple_Google_Login {
 				array( 'status' => 500 )
 			);
 		}
+
+		self::fill_names( $user, $claims );
 
 		// No wp_clear_auth_cookie() first: it adds a dozen expiring Set-Cookie headers, and the
 		// front proxy rejects (502) a response whose headers pass 4 KB - the login then succeeded
