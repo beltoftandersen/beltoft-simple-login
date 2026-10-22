@@ -95,15 +95,16 @@ Log out, open a page with the button, and sign in with a Google account:
 | `sgl_allowed_roles` | `['customer','subscriber']` | Roles that may sign in with Google |
 | `sgl_allow_registration` | WooCommerce's registration settings | Create new customers from Google sign-ins |
 | `sgl_reset_password_on_link` | `true` | Replace the password the first time an existing account is linked |
-| `sgl_max_attempts` | `20` (login), `200` (nonce) | Requests per IP per 10 minutes |
+| `sgl_max_attempts` | `20` | Login attempts per IP per 10 minutes |
 
-## Known gap
+## Security
 
-The plugin registers `GET /wp-json/sgl/v1/nonce` and has a `consume_nonce()` helper, but they aren't wired in yet.
-The script doesn't pass a nonce to Google, and `verify()` doesn't check one. Login is protected by:
-- the token checks (audience, issuer, expiry, verified email);
-- the one-time-use record of each token;
-- the same-site check (`application/json`, plus `Origin` or `Referer` on this host).
+Login is protected by:
+- the token checks with Google: audience = your client ID, issuer, expiry, verified email;
+- a one-time-use record of each token: Redis when a persistent object cache is present, else a transient;
+- a same-site check: the request must be `application/json`, with `Origin` or `Referer` on this host. That stops
+  another site from logging a visitor in (login CSRF);
+- the per-IP rate limit.
 
 ## Troubleshooting
 

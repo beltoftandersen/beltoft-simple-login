@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.2.2
+ * Version: 1.2.3
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -13,7 +13,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.2.2';
+	const VERSION = '1.2.3';
 	const META    = '_sgl_google_sub';
 
 	private static $loaded = false;
@@ -72,7 +72,6 @@ final class Simple_Google_Login {
 			array(
 				'clientId'    => self::client_id(),
 				'endpoint'     => esc_url_raw( rest_url( 'sgl/v1/login' ) ),
-				'nonceUrl'     => esc_url_raw( rest_url( 'sgl/v1/nonce' ) ),
 				'locale'       => str_replace( '_', '-', determine_locale() ),
 				'genericError' => __( 'Google login failed. Please try again.', 'simple-google-login' ),
 				'blocked'      => __( 'The Google button could not load. Log in with your email and password, or allow Google in your browser.', 'simple-google-login' ),
@@ -190,22 +189,9 @@ final class Simple_Google_Login {
 	}
 
 	/**
-	 * Register the public Google credential exchange endpoint, and the one-time nonce endpoint.
+	 * Register the public Google credential exchange endpoint.
 	 */
 	public static function register_route() {
-		// A fresh one-time value per button view. Fetched by the browser (never part of a cached
-		// page), handed to Google, and required back inside the ID token: a token captured
-		// elsewhere, or minted for another page view, cannot be replayed.
-		register_rest_route(
-			'sgl/v1',
-			'/nonce',
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( __CLASS__, 'nonce' ),
-				'permission_callback' => '__return_true',
-			)
-		);
-
 		register_rest_route(
 			'sgl/v1',
 			'/login',
@@ -224,20 +210,6 @@ final class Simple_Google_Login {
 				),
 			)
 		);
-	}
-
-	public static function nonce() {
-		if ( self::throttled( 'n' ) ) {
-			return new WP_Error( 'sgl_throttled', esc_html__( 'Too many attempts. Try again later.', 'simple-google-login' ), array( 'status' => 429 ) );
-		}
-
-		$nonce = wp_generate_password( 32, false, false );
-		set_transient( 'sgl_n_' . $nonce, 1, 15 * MINUTE_IN_SECONDS );
-
-		$response = rest_ensure_response( array( 'nonce' => $nonce ) );
-		$response->header( 'Cache-Control', 'no-store, private' );
-
-		return $response;
 	}
 
 	/**
@@ -267,24 +239,6 @@ final class Simple_Google_Login {
 	}
 
 	/**
-	 * Use a nonce once.
-	 *
-	 * @param string $nonce Nonce from the ID token.
-	 * @return bool
-	 */
-	private static function consume_nonce( $nonce ) {
-		$nonce = (string) $nonce;
-
-		if ( ! preg_match( '/^[A-Za-z0-9]{32}$/', $nonce ) || ! get_transient( 'sgl_n_' . $nonce ) ) {
-			return false;
-		}
-
-		delete_transient( 'sgl_n_' . $nonce );
-
-		return true;
-	}
-
-	/**
 	 * Only our own pages may log a visitor in (login CSRF): the request must be JSON (a form on
 	 * another site cannot send JSON without the browser asking us first) and come from this site.
 	 *
@@ -309,16 +263,16 @@ final class Simple_Google_Login {
 		return '' !== $host && strtolower( (string) wp_parse_url( home_url(), PHP_URL_HOST ) ) === $host;
 	}
 
-	private static function throttled( $bucket = 'l' ) {
+	private static function throttled() {
 		$ip = isset( $_SERVER['REMOTE_ADDR'] )
 			? substr( sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ), 0, 100 )
 			: '';
 
 		// Fixed ten-minute windows: every request used to restart the timer, so a busy shared IP
 		// (mobile carrier NAT, an office) never got out of the limit.
-		$key      = 'sgl_rl_' . $bucket . (int) floor( time() / 600 ) . md5( $ip );
+		$key      = 'sgl_rl_l' . (int) floor( time() / 600 ) . md5( $ip );
 		$attempts = (int) get_transient( $key );
-		$maximum  = max( 1, (int) apply_filters( 'sgl_max_attempts', 'n' === $bucket ? 200 : 20 ) );
+		$maximum  = max( 1, (int) apply_filters( 'sgl_max_attempts', 20 ) );
 
 		if ( $attempts >= $maximum ) {
 			return true;
