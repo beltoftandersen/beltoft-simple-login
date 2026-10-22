@@ -2,10 +2,14 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.2.3
+ * Version: 1.2.4
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
+ * Author: beltoft.net
+ * Author URI: https://beltoft.net
+ * License: GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: simple-google-login
  */
 
@@ -13,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.2.3';
+	const VERSION = '1.2.4';
 	const META    = '_sgl_google_sub';
 
 	private static $loaded = false;
@@ -28,6 +32,9 @@ final class Simple_Google_Login {
 	}
 
 	public static function load_textdomain() {
+		// Not hosted on WordPress.org: the translations ship in this plugin's languages/ folder, which
+		// WordPress only finds when told where it is.
+		// phpcs:ignore PluginCheck.CodeAnalysis.DiscouragedFunctions.load_plugin_textdomainFound
 		load_plugin_textdomain( 'simple-google-login', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 	}
 

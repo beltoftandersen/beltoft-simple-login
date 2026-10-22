@@ -67,6 +67,7 @@ class SGL_Bricks_Element extends \Bricks\Element {
 		$this->set_attribute( '_root', 'class', 'sgl-element' );
 
 		if ( ! $this->is_frontend ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Root attributes are escaped by Bricks.
 			echo '<div ' . $this->render_attributes( '_root' ) . '>';
 			echo '<div style="padding:10px 14px;border:1px dashed #aaa;border-radius:4px;display:inline-block">';
 			echo esc_html__( 'Google Login button (shown on the frontend to logged-out visitors)', 'simple-google-login' );
