@@ -1,0 +1,35 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Simple Google Login 1.2.0\n"
+"Language: pt_PT\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Google login failed. Please try again."
+msgstr "O início de sessão com o Google falhou. Tenta outra vez."
+
+msgid "Google sign-in failed."
+msgstr "O início de sessão com o Google falhou."
+
+msgid "Google login is not configured."
+msgstr "O início de sessão com o Google não está configurado."
+
+msgid "Google login could not load the customer account."
+msgstr "Não foi possível abrir a tua conta."
+
+msgid "Please log in with your password."
+msgstr "Inicia sessão com a tua palavra-passe."
+
+msgid "Registration is disabled."
+msgstr "Não é possível criar contas neste momento."
+
+msgid "This account is already linked to another Google login."
+msgstr "Esta conta já está ligada a outra conta Google."
+
+msgid "Too many attempts. Try again later."
+msgstr "Demasiadas tentativas. Tenta mais tarde."
+
+msgid "The Google button could not load. Log in with your email and password, or allow Google in your browser."
+msgstr "Não foi possível carregar o botão do Google. Inicia sessão com o teu e-mail e palavra-passe, ou permite o Google no teu navegador."
