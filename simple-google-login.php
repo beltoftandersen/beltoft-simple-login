@@ -144,12 +144,37 @@ final class Simple_Google_Login {
 
 		self::load_assets();
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only picks one of our fixed messages.
+		$code    = isset( $_GET['sgl_error'] ) ? sanitize_key( wp_unslash( $_GET['sgl_error'] ) ) : '';
+		$message = self::messages()[ $code ] ?? '';
+		$error   = '' !== $message ? '<div class="sgl-error woocommerce-error" role="alert" style="margin-top:8px">' . esc_html( $message ) . '</div>' : '';
+
 		return sprintf(
-			'<div class="sgl-wrap"><div class="sgl-btn" data-redirect="%s" data-text="%s" data-theme="%s" data-size="%s"></div></div>',
+			'<div class="sgl-wrap"><div class="sgl-btn" data-redirect="%s" data-text="%s" data-theme="%s" data-size="%s"></div>%s</div>',
 			esc_attr( $redirect ),
 			esc_attr( $text ),
 			esc_attr( $theme ),
-			esc_attr( $size )
+			esc_attr( $size ),
+			$error // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+		);
+	}
+
+	/**
+	 * The customer's message for each error code a login can end with.
+	 *
+	 * @return array<string, string>
+	 */
+	private static function messages() {
+		return array(
+			'sgl_not_configured' => __( 'Google login is not configured.', 'simple-google-login' ),
+			'sgl_forbidden'      => __( 'Google sign-in failed.', 'simple-google-login' ),
+			'sgl_invalid'        => __( 'Google sign-in failed.', 'simple-google-login' ),
+			'sgl_throttled'      => __( 'Too many attempts. Try again later.', 'simple-google-login' ),
+			'sgl_staff'          => __( 'Please log in with your password.', 'simple-google-login' ),
+			'sgl_link_conflict'  => __( 'This account is already linked to another Google login.', 'simple-google-login' ),
+			'sgl_noreg'          => __( 'Registration is disabled.', 'simple-google-login' ),
+			'sgl_create'         => __( 'Google login could not create the customer account.', 'simple-google-login' ),
+			'sgl_user'           => __( 'Google login could not load the customer account.', 'simple-google-login' ),
 		);
 	}
 
@@ -405,7 +430,7 @@ final class Simple_Google_Login {
 
 		if ( $user ) {
 			if ( ! self::role_is_allowed( $user ) ) {
-				return new WP_Error( 'sgl_forbidden', esc_html__( 'Please log in with your password.', 'simple-google-login' ) );
+				return new WP_Error( 'sgl_staff', esc_html__( 'Please log in with your password.', 'simple-google-login' ) );
 			}
 
 			if ( ! self::link_existing_user( $user, $sub ) ) {
@@ -465,10 +490,10 @@ final class Simple_Google_Login {
 		$user = self::sign_in( $token );
 
 		if ( is_wp_error( $user ) ) {
-			if ( function_exists( 'wc_add_notice' ) ) {
-				wc_add_notice( $user->get_error_message(), 'error' );
-			}
-			wp_safe_redirect( wp_get_referer() ? wp_get_referer() : $redirect );
+			// A logged-out visitor has no WooCommerce session for a notice: the error code goes back in the address
+			// and the button prints its own message (render_button). Only a known code, never text, is passed.
+			$back = wp_get_referer() ? wp_get_referer() : $redirect;
+			wp_safe_redirect( add_query_arg( 'sgl_error', rawurlencode( $user->get_error_code() ), remove_query_arg( 'sgl_error', $back ) ) );
 			exit;
 		}
 
