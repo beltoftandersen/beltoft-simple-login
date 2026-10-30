@@ -14,7 +14,8 @@ Folder and text domain: `simple-google-login`. Repository: `beltoftandersen/belt
   - with the Bricks element "Google Login".
 - The button only shows to logged-out visitors, never inside the Bricks builder, and never when no client ID is
   configured.
-- When the visitor picks a Google account, the browser posts Google's ID token to `POST /wp-json/sgl/v1/login`.
+- When the visitor picks a Google account, the page posts Google's ID token to itself as a normal form post (field
+  `sgl_credential`), like WooCommerce's login form. The post must come from this site (`Origin`, or `Referer`).
 - The server checks the token with Google (`oauth2.googleapis.com/tokeninfo`): issuer, audience = your client ID,
   expiry and a verified email. Each token is accepted only once.
 - It then finds the customer, or creates one, and logs them in:
@@ -25,6 +26,8 @@ Folder and text domain: `simple-google-login`. Repository: `beltoftandersen/belt
      account signs in with Google or a password reset.
   3. Otherwise, a new WooCommerce customer is created (first and last name from Google). This only happens if
      WooCommerce allows registration on My Account or at checkout (filter `sgl_allow_registration`).
+- The login fires `wp_login` in that page load, so a two-factor plugin that hooks it (WP 2FA) shows its code step
+  first; Google sign-in never skips it. Errors show under the button (query argument `sgl_error`, a fixed code).
 - Only `customer` and `subscriber` accounts can use Google sign-in (filter `sgl_allowed_roles`). Shop managers and
   administrators get "Please log in with your password."
 - After login the page reloads, or goes to the button's redirect. On the checkout the automatic button returns to
@@ -113,7 +116,7 @@ Login is protected by:
 | No button at all | `SGL_CLIENT_ID` missing, the visitor is logged in, or you're in the Bricks builder |
 | "The Google button could not load…" | The browser or an extension blocked `accounts.google.com` |
 | Google shows "origin not allowed" / error 400 | The site's origin isn't in the OAuth client's Authorized JavaScript origins |
-| "Google sign-in failed." | The token was invalid or already used, the client ID doesn't match, or the request wasn't same-site JSON |
+| "Google sign-in failed." | The token was invalid or already used, the client ID doesn't match, or the post did not come from this site |
 | "Registration is disabled." | WooCommerce registration is off for both My Account and checkout |
 | "This account is already linked to another Google login." | The email's account is linked to a different Google account |
 | Login works on the server but the browser stays logged out (502) | The proxy header limit; see Hosting notes |
