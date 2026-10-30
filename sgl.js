@@ -57,37 +57,21 @@
     var redirect = button ? button.dataset.redirect || '' : '';
     clearError(button);
 
-    window.fetch(window.SGL.endpoint, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: response.credential })
-    })
-      .then(function (httpResponse) {
-        return httpResponse.json()
-          .catch(function () { return {}; })
-          .then(function (data) {
-            return { ok: httpResponse.ok, data: data };
-          });
-      })
-      .then(function (result) {
-        if (!result.ok) {
-          requestInFlight = false;
-          showError(result.data.message, button);
-          return;
-        }
-
-        if (redirect) {
-          window.location.assign(redirect);
-        } else {
-          window.location.reload();
-        }
-      })
-      .catch(function () {
-        // The answer was lost (connection, page change). The login may have gone through on the
-        // server: reload, and the page shows the real state - logged in, or the button again.
-        window.location.reload();
-      });
+    // A normal form post, like WooCommerce's own login form: the login finishes as a page load, so a
+    // two-factor step (WP 2FA) shows its code page in the browser instead of being lost in a background call.
+    var form = document.createElement('form');
+    form.method = 'post';
+    form.action = window.location.href.split('#')[0];
+    form.style.display = 'none';
+    [[window.SGL.field || 'sgl_credential', response.credential], ['redirect_to', redirect]].forEach(function (pair) {
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = pair[0];
+      input.value = pair[1];
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
   }
 
   function rememberButton(event) {

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.2.8
+ * Version: 1.3.0
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -17,16 +17,24 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.2.8';
+	const VERSION = '1.3.0';
+	const FIELD   = 'sgl_credential';
 	const META    = '_sgl_google_sub';
 
 	private static $loaded = false;
+
+	/**
+	 * The verified claims of this request's login.
+	 *
+	 * @var array<string, mixed>
+	 */
+	private static $claims = array();
 
 	public static function init() {
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'register_assets' ) );
 		add_action( 'woocommerce_login_form_end', array( __CLASS__, 'auto_button' ) );
 		add_shortcode( 'sgl_google_button', array( __CLASS__, 'shortcode' ) );
-		add_action( 'rest_api_init', array( __CLASS__, 'register_route' ) );
+		add_action( 'wp_loaded', array( __CLASS__, 'form_login' ), 10 );
 		add_action( 'bricks/load_elements/after', array( __CLASS__, 'register_bricks_element' ) );
 		add_action( 'init', array( __CLASS__, 'load_textdomain' ) );
 	}
@@ -78,7 +86,7 @@ final class Simple_Google_Login {
 			'SGL',
 			array(
 				'clientId'    => self::client_id(),
-				'endpoint'     => esc_url_raw( rest_url( 'sgl/v1/login' ) ),
+				'field'        => self::FIELD,
 				'locale'       => str_replace( '_', '-', determine_locale() ),
 				'genericError' => __( 'Google login failed. Please try again.', 'simple-google-login' ),
 				'blocked'      => __( 'The Google button could not load. Log in with your email and password, or allow Google in your browser.', 'simple-google-login' ),
@@ -196,30 +204,6 @@ final class Simple_Google_Login {
 	}
 
 	/**
-	 * Register the public Google credential exchange endpoint.
-	 */
-	public static function register_route() {
-		register_rest_route(
-			'sgl/v1',
-			'/login',
-			array(
-				'methods'             => 'POST',
-				'callback'            => array( __CLASS__, 'login' ),
-				'permission_callback' => '__return_true',
-				'args'                => array(
-					'credential' => array(
-						'required'          => true,
-						'type'              => 'string',
-						'validate_callback' => static function ( $value ) {
-							return is_string( $value ) && '' !== $value && strlen( $value ) <= 4096;
-						},
-					),
-				),
-			)
-		);
-	}
-
-	/**
 	 * Replay guard: a Google ID token is accepted once. Remembered (by hash) until it expires.
 	 *
 	 * @param string $token Raw ID token.
@@ -246,24 +230,19 @@ final class Simple_Google_Login {
 	}
 
 	/**
-	 * Only our own pages may log a visitor in (login CSRF): the request must be JSON (a form on
-	 * another site cannot send JSON without the browser asking us first) and come from this site.
+	 * Only our own pages may log a visitor in (login CSRF): a form post carries the page it came from (Origin, or
+	 * Referer when a browser leaves Origin out), and it must be this site.
 	 *
-	 * @param WP_REST_Request $request Request.
 	 * @return bool
 	 */
-	private static function same_site( WP_REST_Request $request ) {
-		$type = $request->get_content_type();
-
-		if ( empty( $type['value'] ) || 'application/json' !== strtolower( $type['value'] ) ) {
-			return false;
-		}
-
-		$from = (string) $request->get_header( 'origin' );
+	private static function same_site() {
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Only the host is compared.
+		$from = isset( $_SERVER['HTTP_ORIGIN'] ) ? (string) wp_unslash( $_SERVER['HTTP_ORIGIN'] ) : '';
 
 		if ( '' === $from || 'null' === $from ) {
-			$from = (string) $request->get_header( 'referer' );
+			$from = isset( $_SERVER['HTTP_REFERER'] ) ? (string) wp_unslash( $_SERVER['HTTP_REFERER'] ) : '';
 		}
+		// phpcs:enable
 
 		$host = strtolower( (string) wp_parse_url( $from, PHP_URL_HOST ) );
 
@@ -401,54 +380,18 @@ final class Simple_Google_Login {
 	}
 
 	/**
-	 * Verify a Google credential, locate or create the customer, and log them in.
+	 * The customer for verified Google claims: the one linked to that Google account, the one with the same email
+	 * (linked now), or a new one when WooCommerce allows registration.
 	 *
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response|WP_Error
+	 * @param array<string, mixed> $claims Verified ID token claims.
+	 * @return WP_User|WP_Error
 	 */
-	public static function login( WP_REST_Request $request ) {
-		if ( '' === self::client_id() ) {
-			return new WP_Error(
-				'sgl_not_configured',
-				esc_html__( 'Google login is not configured.', 'simple-google-login' ),
-				array( 'status' => 503 )
-			);
-		}
-
-		if ( ! self::same_site( $request ) ) {
-			return new WP_Error(
-				'sgl_forbidden',
-				esc_html__( 'Google sign-in failed.', 'simple-google-login' ),
-				array( 'status' => 403 )
-			);
-		}
-
-		if ( self::throttled() ) {
-			return new WP_Error(
-				'sgl_throttled',
-				esc_html__( 'Too many attempts. Try again later.', 'simple-google-login' ),
-				array( 'status' => 429 )
-			);
-		}
-
-		$claims = self::verify( (string) $request->get_param( 'credential' ) );
-		if ( ! $claims ) {
-			return new WP_Error(
-				'sgl_invalid',
-				esc_html__( 'Google sign-in failed.', 'simple-google-login' ),
-				array( 'status' => 401 )
-			);
-		}
-
+	private static function customer( array $claims ) {
 		$sub   = sanitize_text_field( (string) $claims['sub'] );
 		$email = sanitize_email( (string) $claims['email'] );
 
 		if ( '' === $sub || ! is_email( $email ) ) {
-			return new WP_Error(
-				'sgl_invalid',
-				esc_html__( 'Google sign-in failed.', 'simple-google-login' ),
-				array( 'status' => 401 )
-			);
+			return new WP_Error( 'sgl_invalid', esc_html__( 'Google sign-in failed.', 'simple-google-login' ) );
 		}
 
 		$found = get_users(
@@ -462,30 +405,18 @@ final class Simple_Google_Login {
 
 		if ( $user ) {
 			if ( ! self::role_is_allowed( $user ) ) {
-				return new WP_Error(
-					'sgl_forbidden',
-					esc_html__( 'Please log in with your password.', 'simple-google-login' ),
-					array( 'status' => 403 )
-				);
+				return new WP_Error( 'sgl_forbidden', esc_html__( 'Please log in with your password.', 'simple-google-login' ) );
 			}
 
 			if ( ! self::link_existing_user( $user, $sub ) ) {
-				return new WP_Error(
-					'sgl_link_conflict',
-					esc_html__( 'This account is already linked to another Google login.', 'simple-google-login' ),
-					array( 'status' => 409 )
-				);
+				return new WP_Error( 'sgl_link_conflict', esc_html__( 'This account is already linked to another Google login.', 'simple-google-login' ) );
 			}
 		} else {
 			$registration_enabled = 'yes' === get_option( 'woocommerce_enable_myaccount_registration' )
 				|| 'yes' === get_option( 'woocommerce_enable_signup_and_login_from_checkout' );
 
 			if ( ! apply_filters( 'sgl_allow_registration', $registration_enabled ) ) {
-				return new WP_Error(
-					'sgl_noreg',
-					esc_html__( 'Registration is disabled.', 'simple-google-login' ),
-					array( 'status' => 403 )
-				);
+				return new WP_Error( 'sgl_noreg', esc_html__( 'Registration is disabled.', 'simple-google-login' ) );
 			}
 
 			$id = wc_create_new_customer(
@@ -499,31 +430,92 @@ final class Simple_Google_Login {
 			);
 
 			if ( is_wp_error( $id ) ) {
-				return new WP_Error( 'sgl_create', $id->get_error_message(), array( 'status' => 400 ) );
+				return new WP_Error( 'sgl_create', $id->get_error_message() );
 			}
 
 			add_user_meta( $id, self::META, $sub, true );
 			$user = get_user_by( 'id', $id );
 		}
 
-		if ( ! $user instanceof WP_User ) {
-			return new WP_Error(
-				'sgl_user',
-				esc_html__( 'Google login could not load the customer account.', 'simple-google-login' ),
-				array( 'status' => 500 )
-			);
+		return $user instanceof WP_User ? $user : new WP_Error( 'sgl_user', esc_html__( 'Google login could not load the customer account.', 'simple-google-login' ) );
+	}
+
+	/**
+	 * The login itself, as a normal page load (a form post from sgl.js), like WooCommerce's own login form: the
+	 * cookie is set and wp_login fires in the browser's request, so a two-factor plugin that hooks wp_login (WP 2FA)
+	 * shows its code step to the customer before the login counts. Google never skips the second step.
+	 */
+	public static function form_login() {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Login CSRF is checked with same_site(); the Google token is single use.
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! isset( $_POST[ self::FIELD ] ) ) {
+			return;
 		}
 
-		self::fill_names( $user, $claims );
+		$token    = is_string( $_POST[ self::FIELD ] ) ? trim( wp_unslash( $_POST[ self::FIELD ] ) ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- A JWT, checked with Google.
+		$redirect = isset( $_POST['redirect_to'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ), '' ) : '';
+		// phpcs:enable
 
-		// No wp_clear_auth_cookie() first: it adds a dozen expiring Set-Cookie headers, and the
-		// front proxy rejects (502) a response whose headers pass 4 KB - the login then succeeded
-		// on the server while the browser never got its cookie. The new cookies overwrite the old.
+		$redirect = '' !== $redirect ? $redirect : ( function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/' ) );
+
+		if ( is_user_logged_in() ) {
+			wp_safe_redirect( $redirect );
+			exit;
+		}
+
+		$user = self::sign_in( $token );
+
+		if ( is_wp_error( $user ) ) {
+			if ( function_exists( 'wc_add_notice' ) ) {
+				wc_add_notice( $user->get_error_message(), 'error' );
+			}
+			wp_safe_redirect( wp_get_referer() ? wp_get_referer() : $redirect );
+			exit;
+		}
+
+		self::fill_names( $user, self::$claims );
+
+		// No wp_clear_auth_cookie() first: it adds a dozen expiring Set-Cookie headers, and the front proxy rejects
+		// (502) a response whose headers pass 4 KB. The new cookies overwrite the old.
 		wp_set_current_user( $user->ID );
 		wp_set_auth_cookie( $user->ID, true );
+
+		// A two-factor plugin takes over here: it ends this login, prints its code step and stops. WP 2FA sends
+		// the customer to redirect_to once the code is right.
+		$_REQUEST['redirect_to'] = $redirect;
 		do_action( 'wp_login', $user->user_login, $user );
 
-		return rest_ensure_response( array( 'ok' => true ) );
+		wp_safe_redirect( $redirect );
+		exit;
+	}
+
+	/**
+	 * The checks before a login: configured, from this site, not throttled, a valid single-use Google token.
+	 *
+	 * @param string $token Google ID token.
+	 * @return WP_User|WP_Error
+	 */
+	private static function sign_in( $token ) {
+		if ( '' === self::client_id() ) {
+			return new WP_Error( 'sgl_not_configured', esc_html__( 'Google login is not configured.', 'simple-google-login' ) );
+		}
+
+		if ( ! self::same_site() ) {
+			return new WP_Error( 'sgl_forbidden', esc_html__( 'Google sign-in failed.', 'simple-google-login' ) );
+		}
+
+		if ( self::throttled() ) {
+			return new WP_Error( 'sgl_throttled', esc_html__( 'Too many attempts. Try again later.', 'simple-google-login' ) );
+		}
+
+		$claims = self::verify( $token );
+
+		if ( ! $claims ) {
+			return new WP_Error( 'sgl_invalid', esc_html__( 'Google sign-in failed.', 'simple-google-login' ) );
+		}
+
+		self::$claims = $claims;
+
+		return self::customer( $claims );
 	}
 }
 

@@ -4,7 +4,7 @@ Tags: google, login, woocommerce, social login, bricks
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.8
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ Add the exact site origin (scheme and host, no path) to the OAuth client's Autho
 No. Only the roles in the `sgl_allowed_roles` filter (default: customer, subscriber) can.
 
 == Changelog ==
+
+= 1.3.0 =
+* The login finishes as a normal page load (a form post from this site, like WooCommerce's login form) instead of a background call: a two-factor plugin that hooks the login (WP 2FA) now shows its code step, and Google sign-in no longer fails for customers who use two-factor login. The REST route sgl/v1/login is gone; login CSRF is checked by the page the post comes from.
 
 = 1.2.8 =
 * Google sign-in fills the empty account and WooCommerce billing first and last name (and billing email), so checkout is pre-filled. Typed names are never overwritten. Filter: sgl_fill_names.
