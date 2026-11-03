@@ -111,6 +111,12 @@ Login is protected by:
 
 ## Troubleshooting
 
+The button reserves its space while Google's script loads. Hidden checkout steps defer rendering until they have a measurable width. Temporary Google markup stays hidden until the loaded iframe has dimensions and page fonts have settled. Opening the same step again at the same width reuses the existing iframe. Width limits remain Google's 200–400 px; center its outer Bricks element with native margins when the form is wider.
+
+### Browser verification
+
+Install development dependencies with `npm ci`, then set `SGL_TEST_URL` to an authorized guest page containing the button and run `npm run test:browser`. For a multistep checkout, also set `SGL_TEST_OPEN_STEP` to its forward button text, `SGL_TEST_BUTTON` to the specific Google host selector, and `SGL_TEST_CONTAINER` to the surrounding layout container. The suite uses the real Google SDK with delayed and blocked requests, checks four widths, resizing and the three button sizes, and never signs in or submits checkout. Results and screenshots stay in ignored `.artifacts/`.
+
 | Symptom | Cause |
 |---|---|
 | No button at all | `SGL_CLIENT_ID` missing, the visitor is logged in, or you're in the Bricks builder |

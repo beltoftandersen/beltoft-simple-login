@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.3.0
+ * Version: 1.3.1
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.3.0';
+	const VERSION = '1.3.1';
 	const FIELD   = 'sgl_credential';
 	const META    = '_sgl_google_sub';
 
@@ -136,6 +136,7 @@ final class Simple_Google_Login {
 		$text  = in_array( $args['text'], $texts, true ) ? $args['text'] : 'continue_with';
 		$theme = in_array( $args['theme'], $themes, true ) ? $args['theme'] : 'outline';
 		$size  = in_array( $args['size'], $sizes, true ) ? $args['size'] : 'large';
+		$height = array( 'small' => 24, 'medium' => 36, 'large' => 44 )[ $size ];
 
 		$redirect = '';
 		if ( ! empty( $args['redirect'] ) ) {
@@ -150,7 +151,8 @@ final class Simple_Google_Login {
 		$error   = '' !== $message ? '<div class="sgl-error woocommerce-error" role="alert" style="margin-top:8px">' . esc_html( $message ) . '</div>' : '';
 
 		return sprintf(
-			'<div class="sgl-wrap"><div class="sgl-btn" data-redirect="%s" data-text="%s" data-theme="%s" data-size="%s"></div>%s</div>',
+			'<div class="sgl-wrap"><div class="sgl-btn" style="height:%dpx" data-redirect="%s" data-text="%s" data-theme="%s" data-size="%s"></div>%s</div>',
+			$height,
 			esc_attr( $redirect ),
 			esc_attr( $text ),
 			esc_attr( $theme ),

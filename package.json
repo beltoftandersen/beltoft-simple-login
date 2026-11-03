@@ -1,0 +1,6 @@
+{
+  "name": "simple-google-login-qa",
+  "private": true,
+  "scripts": { "test:browser": "node tests/button-browser.cjs" },
+  "devDependencies": { "playwright-core": "1.58.2" }
+}

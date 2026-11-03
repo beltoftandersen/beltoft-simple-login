@@ -81,6 +81,9 @@
   // As wide as its container, within what Google allows (200 to 400 px), so the button lines up
   // with the form fields around it instead of sitting at Google's narrower default.
   function buttonWidth(element) {
+    // A hidden checkout step has no usable width. Wait for it to open rather
+    // than drawing Google's default button and immediately replacing it.
+    if (!element.getClientRects().length || !element.clientWidth) return 0;
     // The content box: padding and borders are not room for the button.
     var style = window.getComputedStyle(element);
     var width = Math.floor(element.clientWidth - parseFloat(style.paddingLeft || 0) - parseFloat(style.paddingRight || 0));
@@ -88,8 +91,81 @@
     return width > 0 ? Math.max(200, Math.min(400, width)) : 0;
   }
 
+  // Google first inserts temporary markup, then replaces it with its iframe.
+  // Reveal only the loaded, sized iframe, after fonts settle; keep its space.
+  function waitForButton(element) {
+    var originalOpacity = element.style.opacity;
+    var originalInert = element.inert;
+    var loadedFrame = null;
+    var fontsReady = !document.fonts;
+    var cancelled = false;
+    var timer;
+    var visibilityObserver;
+    // Keep the iframe in layout: Google defers sizing visibility:hidden frames.
+    element.style.opacity = '0';
+    element.inert = true;
+    delete element.dataset.sglReady;
+
+    function cleanup() {
+      cancelled = true;
+      clearTimeout(timer);
+      if (visibilityObserver) visibilityObserver.disconnect();
+      watcher.disconnect();
+      element.removeEventListener('load', loaded, true);
+      element.style.opacity = originalOpacity;
+      element.inert = originalInert;
+    }
+    function check() {
+      if (cancelled || !fontsReady || !loadedFrame || !element.contains(loadedFrame)) return;
+      var box = loadedFrame.getBoundingClientRect();
+      // Google's temporary HTML button is removed when its iframe takes over.
+      // Smaller buttons legitimately have extra clickable space around the iframe.
+      if (!box.width || !box.height || element.querySelector('[role="button"]')) return;
+      requestAnimationFrame(function () {
+        if (cancelled || !element.contains(loadedFrame)) return;
+        element.dataset.sglReady = 'true';
+        cleanup();
+      });
+    }
+    function loaded(event) {
+      if (event.target.tagName !== 'IFRAME') return;
+      loadedFrame = event.target;
+      check();
+    }
+    var watcher = new MutationObserver(check);
+    watcher.observe(element, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'width', 'height'] });
+    element.addEventListener('load', loaded, true);
+    if (document.fonts) {
+      document.fonts.ready.then(function () { fontsReady = true; check(); });
+    }
+    function timeoutWhenVisible(visible) {
+      clearTimeout(timer);
+      if (!visible || cancelled) return;
+      timer = setTimeout(function () {
+        cleanup();
+        element.innerHTML = '';
+        showError(window.SGL.blocked, element);
+      }, 10000);
+    }
+    // Offscreen buttons may be lazy-loaded by Google; only time out on screen.
+    if (window.IntersectionObserver) {
+      visibilityObserver = new IntersectionObserver(function (entries) {
+        timeoutWhenVisible(entries[0].isIntersecting);
+      });
+      visibilityObserver.observe(element);
+    } else {
+      timeoutWhenVisible(true);
+    }
+    return cleanup;
+  }
+
   function draw(element) {
     var width = buttonWidth(element);
+    if (!width) return;
+
+    if (element.sglCancelReveal) element.sglCancelReveal();
+    clearError(element);
+    element.sglCancelReveal = waitForButton(element);
 
     element.dataset.sglWidth = String(width);
     // Keep the current height while Google draws the new button, so nothing below it moves.
@@ -124,10 +200,8 @@
 
       width = buttonWidth(element);
 
-      // 0 while the old button is cleared out of a shrink-to-fit container: not a real size.
-      if (!width && Number(element.dataset.sglWidth || 0) > 0) {
-        return;
-      }
+      // A closed step keeps its already drawn button; its next opening may resize it.
+      if (!width) return;
 
       if (Math.abs(width - Number(element.dataset.sglWidth || 0)) > 1) {
         draw(element);
