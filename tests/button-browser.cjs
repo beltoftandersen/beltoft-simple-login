@@ -62,6 +62,7 @@ async function ready(page) {
         return { leftError: Math.abs(box.x - parent.x), centerError: Math.abs(box.x + box.width / 2 - parent.x - parent.width / 2), height: box.height, width: box.width };
       }, container);
       assert.ok(geometry[alignment === 'left' ? 'leftError' : 'centerError'] < 1, JSON.stringify(geometry));
+      if (process.env.SGL_TEST_MAX_WIDTH) assert.ok(geometry.width <= +process.env.SGL_TEST_MAX_WIDTH, 'Native Bricks max-width must constrain the button');
       assert.equal(geometry.height, 44);
       const samples = await page.evaluate(() => window.__sglSamples);
       assert.ok(samples.length > 0);
@@ -83,7 +84,7 @@ async function ready(page) {
       }
       await page.screenshot({ path: path.join(output, 'button-' + width + '.png'), fullPage: true });
       if (width === 1440) {
-        await page.setViewportSize({ width: 390, height: 1000 });
+        await page.setViewportSize({ width: 320, height: 1000 });
         await page.waitForFunction(selector => {
           const host = document.querySelector(selector);
           return host?.dataset.sglReady === 'true' && +host.dataset.sglWidth === Math.max(200, Math.min(400, Math.floor(host.clientWidth)));

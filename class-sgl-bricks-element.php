@@ -12,7 +12,6 @@ class SGL_Bricks_Element extends \Bricks\Element {
 	public $category     = 'woocommerce';
 	public $name         = 'sgl-google-login';
 	public $icon         = 'ti-google';
-	public $css_selector = '.sgl-element';
 
 	public function get_label() {
 		return esc_html__( 'Google Login', 'simple-google-login' );

@@ -111,11 +111,19 @@ Login is protected by:
 
 ## Troubleshooting
 
+### Editing the Bricks element
+
+Select **Google login** in the Builder structure tree. **Content** controls its wording preset, Google theme, size and redirect. **Style → Layout → Width / Max. width** controls its width; use Width `100%` and a Max. width such as `300px` for a narrower responsive button. Google's supported rendered width is 200–400 px. Size controls the button height, not its width. The Builder shows a placeholder; the real Google button appears on the frontend for logged-out visitors.
+
+If a full-access administrator sees a missing-capabilities message on an older plugin version, update to 1.3.3 and reload the Builder tab. Older versions registered after Bricks loaded its element controls and permission catalogue. Registration now happens after Bricks initializes its base classes but before its element-load pass, with an idempotent pre-load fallback. No role/capability grants are required.
+
 The button reserves its space while Google's script loads. Hidden checkout steps defer rendering until they have a measurable width. Temporary Google markup stays hidden until the loaded iframe has dimensions and page fonts have settled. Opening the same step again at the same width reuses the existing iframe. Width limits remain Google's 200–400 px; center its outer Bricks element with native margins when the form is wider.
 
 ### Browser verification
 
 Install development dependencies with `npm ci`, then set `SGL_TEST_URL` to an authorized guest page containing the button and run `npm run test:browser`. For a multistep checkout, also set `SGL_TEST_OPEN_STEP` to its forward button text, `SGL_TEST_BUTTON` to the specific Google host selector, and `SGL_TEST_CONTAINER` to the surrounding layout container. Set `SGL_TEST_ALIGNMENT=left` to verify left alignment instead of centering. The suite uses the real Google SDK with delayed and blocked requests, checks four widths, resizing and the three button sizes, and never signs in or submits checkout. Results and screenshots stay in ignored `.artifacts/`.
+
+Set `SGL_TEST_MAX_WIDTH=300` to assert a native 300 px width cap. `tests/bricks-registration.php` runs through WP-CLI with an authorized editor and an existing Google element: `wp --user=<editor> eval-file tests/bricks-registration.php <post-id> <element-id>`. It checks early registration, retained controls, root CSS bindings and a permission-checked layout dry run without saving a page or changing permissions.
 
 | Symptom | Cause |
 |---|---|

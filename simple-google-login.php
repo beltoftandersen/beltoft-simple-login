@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.3.2
+ * Version: 1.3.3
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.3.2';
+	const VERSION = '1.3.3';
 	const FIELD   = 'sgl_credential';
 	const META    = '_sgl_google_sub';
 
@@ -35,7 +35,10 @@ final class Simple_Google_Login {
 		add_action( 'woocommerce_login_form_end', array( __CLASS__, 'auto_button' ) );
 		add_shortcode( 'sgl_google_button', array( __CLASS__, 'shortcode' ) );
 		add_action( 'wp_loaded', array( __CLASS__, 'form_login' ), 10 );
-		add_action( 'bricks/load_elements/after', array( __CLASS__, 'register_bricks_element' ) );
+		// Bricks registers its base classes on init. Be present before it loads
+		// element controls and snapshots its available editing permissions.
+		add_action( 'init', array( __CLASS__, 'register_bricks_element' ), 11 );
+		add_action( 'bricks/load_elements/before', array( __CLASS__, 'register_bricks_element' ) );
 		add_action( 'init', array( __CLASS__, 'load_textdomain' ) );
 	}
 
@@ -218,10 +221,10 @@ final class Simple_Google_Login {
 	}
 
 	/**
-	 * Register the native Bricks element after Bricks has loaded its elements.
+	 * Register before Bricks loads controls, without overwriting a loaded instance.
 	 */
 	public static function register_bricks_element() {
-		if ( class_exists( '\\Bricks\\Elements' ) ) {
+		if ( class_exists( \Bricks\Elements::class ) && class_exists( \Bricks\Element::class ) && ! isset( \Bricks\Elements::$elements['sgl-google-login'] ) ) {
 			\Bricks\Elements::register_element(
 				__DIR__ . '/class-sgl-bricks-element.php',
 				'sgl-google-login',
