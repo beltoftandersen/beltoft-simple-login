@@ -8,6 +8,7 @@ if (!url) throw new Error('Set SGL_TEST_URL to an authorized guest page containi
 const openStep = process.env.SGL_TEST_OPEN_STEP;
 const container = process.env.SGL_TEST_CONTAINER || '.sgl-wrap';
 const buttonSelector = process.env.SGL_TEST_BUTTON || '.sgl-btn';
+const alignment = process.env.SGL_TEST_ALIGNMENT || 'center';
 const output = path.join(__dirname, '../.artifacts');
 const results = [];
 async function open(page) {
@@ -58,9 +59,9 @@ async function ready(page) {
       const geometry = await page.locator(buttonSelector).evaluate((host, selector) => {
         const box = host.getBoundingClientRect();
         const parent = host.closest(selector).getBoundingClientRect();
-        return { centerError: Math.abs(box.x + box.width / 2 - parent.x - parent.width / 2), height: box.height, width: box.width };
+        return { leftError: Math.abs(box.x - parent.x), centerError: Math.abs(box.x + box.width / 2 - parent.x - parent.width / 2), height: box.height, width: box.width };
       }, container);
-      assert.ok(geometry.centerError < 1, JSON.stringify(geometry));
+      assert.ok(geometry[alignment === 'left' ? 'leftError' : 'centerError'] < 1, JSON.stringify(geometry));
       assert.equal(geometry.height, 44);
       const samples = await page.evaluate(() => window.__sglSamples);
       assert.ok(samples.length > 0);
@@ -110,7 +111,7 @@ async function ready(page) {
         results.push({ check: 'small-and-medium-google-frame-heights', passed: true });
       }
       assert.deepEqual(errors, []);
-      results.push({ width, passed: true, checks: ['delayed real iframe', 'no visible intermediate button', 'reserved height', 'centered', 'no horizontal overflow', ...(openStep ? ['same-width step reuses iframe'] : [])] });
+      results.push({ width, passed: true, checks: ['delayed real iframe', 'no visible intermediate button', 'reserved height', alignment === 'left' ? 'left aligned' : 'centered', 'no horizontal overflow', ...(openStep ? ['same-width step reuses iframe'] : [])] });
       await context.close();
     }
     const blocked = await browser.newContext();
