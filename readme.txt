@@ -4,7 +4,7 @@ Tags: google, login, woocommerce, social login, bricks
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.3.3
+Stable tag: 1.3.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ Add the exact site origin (scheme and host, no path) to the OAuth client's Autho
 No. Only the roles in the `sgl_allowed_roles` filter (default: customer, subscriber) can.
 
 == Changelog ==
+
+= 1.3.4 =
+* The Google button no longer reports "could not load" when its iframe is already drawn; the message only appears when Google rendered nothing in the container.
 
 = 1.3.3 =
 * Register the Bricks element before controls and editing permissions are loaded, so full-access administrators can edit it. Preserve loaded controls on repeated loading.

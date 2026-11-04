@@ -143,6 +143,12 @@
       if (!visible || cancelled) return;
       timer = setTimeout(function () {
         cleanup();
+        // Only report a failure when Google drew nothing at all. A container that already holds an
+        // iframe or a rendered button is left alone and shown as it is.
+        if (element.querySelector('iframe, [role="button"]')) {
+          element.dataset.sglReady = 'true';
+          return;
+        }
         element.innerHTML = '';
         showError(window.SGL.blocked, element);
       }, 10000);
