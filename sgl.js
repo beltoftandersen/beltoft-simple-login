@@ -174,6 +174,9 @@
     element.sglCancelReveal = waitForButton(element);
 
     element.dataset.sglWidth = String(width);
+    // Google's button is at most 400 px wide: in a wider form it sits in the middle of its container.
+    element.style.display = 'flex';
+    element.style.justifyContent = 'center';
     // Keep the current height while Google draws the new button, so nothing below it moves.
     if (element.offsetHeight) {
       element.style.minHeight = element.offsetHeight + 'px';
