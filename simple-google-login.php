@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.3.5
+ * Version: 1.3.6
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.3.5';
+	const VERSION = '1.3.6';
 	const FIELD   = 'sgl_credential';
 	const META    = '_sgl_google_sub';
 
@@ -53,9 +53,13 @@ final class Simple_Google_Login {
 	 * Register frontend assets. They are enqueued only when a button renders.
 	 */
 	public static function register_assets() {
+		// The button language: Google reads hl from the script address. The locale option of renderButton alone was
+		// overruled by the visitor's location, so a server-side visit from Germany got "Weiter mit Google".
+		$language = strtolower( (string) strtok( determine_locale(), '_' ) );
+
 		wp_register_script(
 			'google-gsi',
-			'https://accounts.google.com/gsi/client',
+			add_query_arg( 'hl', rawurlencode( '' !== $language ? $language : 'en' ), 'https://accounts.google.com/gsi/client' ),
 			array(),
 			null,
 			array(
