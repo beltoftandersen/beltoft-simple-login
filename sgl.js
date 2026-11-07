@@ -233,8 +233,12 @@
     });
   }
 
+  var started = false;
+
   function start() {
+    if (started) return;
     if (!document.querySelector('.sgl-btn') || !window.SGL || !window.SGL.clientId) return;
+    started = true;
 
     if (!window.google || !window.google.accounts || !window.google.accounts.id) {
       // Blocked by the browser or an extension: say so instead of showing nothing.
@@ -259,9 +263,31 @@
       });
   }
 
-  if (document.readyState === 'complete') {
-    start();
+  // Start as soon as Google's script is ready instead of waiting for the whole page (payment fields,
+  // analytics, images) to finish loading. If Google's script has not run yet, wait for it, and fall back
+  // to the page load event so a blocked script still shows the error message.
+  function boot() {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      start();
+      return;
+    }
+    var gsi = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+    if (gsi && document.readyState !== 'complete') {
+      gsi.addEventListener('load', start, { once: true });
+      gsi.addEventListener('error', start, { once: true });
+      window.addEventListener('load', start, { once: true });
+      return;
+    }
+    if (document.readyState === 'complete') {
+      start();
+    } else {
+      window.addEventListener('load', start, { once: true });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
   } else {
-    window.addEventListener('load', start, { once: true });
+    boot();
   }
 }());

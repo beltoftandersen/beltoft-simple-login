@@ -4,7 +4,7 @@ Tags: google, login, woocommerce, social login, bricks
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.3.6
+Stable tag: 1.3.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ Add the exact site origin (scheme and host, no path) to the OAuth client's Autho
 No. Only the roles in the `sgl_allowed_roles` filter (default: customer, subscriber) can.
 
 == Changelog ==
+
+= 1.3.7 =
+* The button appears as soon as Google's script is ready. It no longer waits for the whole page, such as payment fields and images, to finish loading.
 
 = 1.3.6 =
 * The button text follows the site language. Google could show it in the language of the visitor's location.
