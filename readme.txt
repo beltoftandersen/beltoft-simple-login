@@ -4,7 +4,7 @@ Tags: google, login, woocommerce, social login, bricks
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.3.7
+Stable tag: 1.3.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,10 @@ Add the exact site origin (scheme and host, no path) to the OAuth client's Autho
 No. Only the roles in the `sgl_allowed_roles` filter (default: customer, subscriber) can.
 
 == Changelog ==
+
+= 1.3.8 =
+* A login page opened with a redirect_to address (a "Log in" link from the checkout, for example) now goes on to that address after the Google login, also when a two-factor step comes in between.
+
 
 = 1.3.7 =
 * The button appears as soon as Google's script is ready. It no longer waits for the whole page, such as payment fields and images, to finish loading.

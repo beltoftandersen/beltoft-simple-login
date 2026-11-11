@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.3.7
+ * Version: 1.3.8
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.3.7';
+	const VERSION = '1.3.8';
 	const FIELD   = 'sgl_credential';
 	const META    = '_sgl_google_sub';
 
@@ -151,6 +151,10 @@ final class Simple_Google_Login {
 			$redirect = wp_validate_redirect( esc_url_raw( $args['redirect'] ), '' );
 		}
 
+		if ( '' === $redirect ) {
+			$redirect = self::requested_redirect();
+		}
+
 		self::load_assets();
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only picks one of our fixed messages.
@@ -270,6 +274,19 @@ final class Simple_Google_Login {
 	 *
 	 * @return bool
 	 */
+	/**
+	 * The address the login page was asked to go on to: the standard redirect_to parameter in its own
+	 * address (a "Log in" link from the checkout, for example). Only an address on this site counts.
+	 *
+	 * @return string '' when there is none.
+	 */
+	private static function requested_redirect() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Only a validated address on this site is used.
+		$url = isset( $_GET['redirect_to'] ) && is_string( $_GET['redirect_to'] ) ? esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ) : '';
+
+		return '' !== $url ? (string) wp_validate_redirect( $url, '' ) : '';
+	}
+
 	private static function same_site() {
 		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Only the host is compared.
 		$from = isset( $_SERVER['HTTP_ORIGIN'] ) ? (string) wp_unslash( $_SERVER['HTTP_ORIGIN'] ) : '';
@@ -490,6 +507,7 @@ final class Simple_Google_Login {
 		$redirect = isset( $_POST['redirect_to'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ), '' ) : '';
 		// phpcs:enable
 
+		$redirect = '' !== $redirect ? $redirect : self::requested_redirect();
 		$redirect = '' !== $redirect ? $redirect : ( function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/' ) );
 
 		if ( is_user_logged_in() ) {
