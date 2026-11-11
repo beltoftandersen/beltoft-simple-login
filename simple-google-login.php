@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.3.9
+ * Version: 1.3.10
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.3.9';
+	const VERSION = '1.3.10';
 	const FIELD   = 'sgl_credential';
 	const META    = '_sgl_google_sub';
 
@@ -179,8 +179,8 @@ final class Simple_Google_Login {
 	 *
 	 * Google draws its button in a frame of its own, and for a visitor who is signed in to Google it first looks up
 	 * their account ("Continue as ..."), which can take seconds in a browser that restricts third-party cookies. Until
-	 * then the spot was empty. The stand-in looks like Google's button, is not clickable and is hidden from screen
-	 * readers; sgl.js hides it when the real button is ready or when an error is shown. Its styles are inline, so it
+	 * then the spot was empty. The stand-in has the shape of Google's button but is dimmed and pulses, so it reads as "loading" and not as a
+	 * button that does not work; it is hidden from screen readers; sgl.js hides it when the real button is ready or when an error is shown. Its styles are inline, so it
 	 * is right from the first paint.
 	 *
 	 * @param string $text   Button text key.
@@ -204,7 +204,7 @@ final class Simple_Google_Login {
 		$icon   = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
 
 		return sprintf(
-			'<div class="sgl-placeholder" aria-hidden="true" style="position:absolute;top:2px;left:50%%;transform:translateX(-50%%);box-sizing:border-box;width:100%%;max-width:400px;height:%1$dpx;display:flex;align-items:center;justify-content:center;border-radius:4px;%2$s;font:500 %3$dpx/1 Roboto,Arial,sans-serif;letter-spacing:.25px;white-space:nowrap;pointer-events:none"><span style="position:absolute;left:12px;top:50%%;transform:translateY(-50%%);display:flex">%4$s</span><span>%5$s</span></div>',
+			'<div class="sgl-placeholder" aria-hidden="true" style="position:absolute;top:2px;left:50%%;transform:translateX(-50%%);box-sizing:border-box;width:100%%;max-width:400px;height:%1$dpx;display:flex;align-items:center;justify-content:center;border-radius:4px;%2$s;font:500 %3$dpx/1 Roboto,Arial,sans-serif;letter-spacing:.25px;white-space:nowrap;cursor:progress;animation:sgl-wait 1.2s ease-in-out infinite alternate"><span style="position:absolute;left:12px;top:50%%;transform:translateY(-50%%);display:flex">%4$s</span><span>%5$s</span></div><style>@keyframes sgl-wait{from{opacity:.35}to{opacity:.7}}@media (prefers-reduced-motion:reduce){.sgl-placeholder{animation:none!important;opacity:.55}}</style>',
 			(int) $height - 4, // Google's button is 4px lower than the space it is given, the icon sits at its left edge.
 			$looks[ $theme ],
 			(int) $font,

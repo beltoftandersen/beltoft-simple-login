@@ -4,7 +4,7 @@ Tags: google, login, woocommerce, social login, bricks
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.3.9
+Stable tag: 1.3.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ Add the exact site origin (scheme and host, no path) to the OAuth client's Autho
 No. Only the roles in the `sgl_allowed_roles` filter (default: customer, subscriber) can.
 
 == Changelog ==
+
+= 1.3.10 =
+* The stand-in for Google's button is dimmed and pulses while Google loads, so it reads as loading and not as a button that does not respond.
 
 = 1.3.9 =
 * While Google draws its button (which can take seconds for a visitor who is signed in to Google, because Google looks up their account first), a stand-in that looks like the button fills the spot. It is not clickable, is hidden from screen readers, and goes when the real button is ready or an error is shown.
