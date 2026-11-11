@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Simple Google Login for WooCommerce
  * Description: "Continue with Google" login and registration for WooCommerce. Bricks Builder ready.
- * Version: 1.3.8
+ * Version: 1.3.9
  * Requires at least: 6.5
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Simple_Google_Login {
 
-	const VERSION = '1.3.8';
+	const VERSION = '1.3.9';
 	const FIELD   = 'sgl_credential';
 	const META    = '_sgl_google_sub';
 
@@ -163,13 +163,53 @@ final class Simple_Google_Login {
 		$error   = '' !== $message ? '<div class="sgl-error woocommerce-error" role="alert" style="margin-top:8px">' . esc_html( $message ) . '</div>' : '';
 
 		return sprintf(
-			'<div class="sgl-wrap"><div class="sgl-btn" style="height:%dpx" data-redirect="%s" data-text="%s" data-theme="%s" data-size="%s"></div>%s</div>',
+			'<div class="sgl-wrap" style="position:relative"><div class="sgl-btn" style="height:%dpx" data-redirect="%s" data-text="%s" data-theme="%s" data-size="%s"></div>%s%s</div>',
 			$height,
 			esc_attr( $redirect ),
 			esc_attr( $text ),
 			esc_attr( $theme ),
 			esc_attr( $size ),
+			self::placeholder( $text, $theme, $size, $height ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built from fixed parts, text escaped.
 			$error // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped above.
+		);
+	}
+
+	/**
+	 * A stand-in for Google's button, shown in its place until Google has drawn the real one.
+	 *
+	 * Google draws its button in a frame of its own, and for a visitor who is signed in to Google it first looks up
+	 * their account ("Continue as ..."), which can take seconds in a browser that restricts third-party cookies. Until
+	 * then the spot was empty. The stand-in looks like Google's button, is not clickable and is hidden from screen
+	 * readers; sgl.js hides it when the real button is ready or when an error is shown. Its styles are inline, so it
+	 * is right from the first paint.
+	 *
+	 * @param string $text   Button text key.
+	 * @param string $theme  Button theme.
+	 * @param string $size   Button size.
+	 * @param int    $height Height in pixels.
+	 * @return string
+	 */
+	private static function placeholder( $text, $theme, $size, $height ) {
+		$labels = array(
+			'continue_with' => __( 'Continue with Google', 'simple-google-login' ),
+			'signin_with'   => __( 'Sign in with Google', 'simple-google-login' ),
+			'signup_with'   => __( 'Sign up with Google', 'simple-google-login' ),
+		);
+		$looks  = array(
+			'outline'      => 'background:#fff;color:#3c4043;border:1px solid #dadce0',
+			'filled_blue'  => 'background:#1a73e8;color:#fff;border:1px solid #1a73e8',
+			'filled_black' => 'background:#202124;color:#fff;border:1px solid #202124',
+		);
+		$font   = array( 'small' => 12, 'medium' => 14, 'large' => 14 )[ $size ];
+		$icon   = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+
+		return sprintf(
+			'<div class="sgl-placeholder" aria-hidden="true" style="position:absolute;top:0;left:50%%;transform:translateX(-50%%);box-sizing:border-box;width:100%%;max-width:400px;height:%1$dpx;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:4px;%2$s;font:500 %3$dpx/1 Roboto,Arial,sans-serif;letter-spacing:.25px;white-space:nowrap;pointer-events:none">%4$s<span>%5$s</span></div>',
+			(int) $height,
+			$looks[ $theme ],
+			(int) $font,
+			$icon,
+			esc_html( $labels[ $text ] )
 		);
 	}
 

@@ -31,6 +31,14 @@
       wrap.appendChild(box);
     }
     box.textContent = message || window.SGL.genericError;
+    standIn(target, false);
+  }
+
+  // The stand-in printed with the button (simple-google-login.php) covers the spot until Google's button is ready.
+  function standIn(button, show) {
+    var wrap = button && (button.closest('.sgl-wrap') || button.parentNode);
+    var box = wrap && wrap.querySelector('.sgl-placeholder');
+    if (box) box.style.display = show ? 'flex' : 'none';
   }
 
   function clearError(button) {
@@ -105,6 +113,7 @@
     element.style.opacity = '0';
     element.inert = true;
     delete element.dataset.sglReady;
+    standIn(element, true);
 
     function cleanup() {
       cancelled = true;
@@ -125,6 +134,7 @@
         if (cancelled || !element.contains(loadedFrame)) return;
         element.dataset.sglReady = 'true';
         cleanup();
+        standIn(element, false);
       });
     }
     function loaded(event) {
@@ -147,6 +157,7 @@
         // iframe or a rendered button is left alone and shown as it is.
         if (element.querySelector('iframe, [role="button"]')) {
           element.dataset.sglReady = 'true';
+          standIn(element, false);
           return;
         }
         element.innerHTML = '';
